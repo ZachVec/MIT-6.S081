@@ -440,3 +440,40 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+// print out all valid ptes 
+// and corresponding physical address
+void vmprint(pagetable_t pagetable) {
+  /* format
+  page table 0x0000000087f6e000
+  ..0: pte 0x0000000021fda801 pa 0x0000000087f6a000
+  .. ..0: pte 0x0000000021fda401 pa 0x0000000087f69000
+  .. .. ..0: pte 0x0000000021fdac1f pa 0x0000000087f6b000
+  .. .. ..1: pte 0x0000000021fda00f pa 0x0000000087f68000
+  .. .. ..2: pte 0x0000000021fd9c1f pa 0x0000000087f67000
+  ..255: pte 0x0000000021fdb401 pa 0x0000000087f6d000
+  .. ..511: pte 0x0000000021fdb001 pa 0x0000000087f6c000
+  .. .. ..510: pte 0x0000000021fdd807 pa 0x0000000087f76000
+  .. .. ..511: pte 0x0000000020001c0b pa 0x0000000080007000
+  */
+  printf("page table %p\n", pagetable);
+  pte_t pte;
+  for(int i = 0; i < 512; ++i) {
+    // if current page is not valid
+    if(!((pte = pagetable[i]) & PTE_V)) continue;
+
+    pagetable_t pgtbv1 = (pagetable_t)PTE2PA(pte);
+    printf("..%d: pte %p pa %p\n", i, pte, pgtbv1);
+    for(int j = 0; j < 512; ++j) {
+      // if current page is not valid
+      if(!((pte = pgtbv1[j]) & PTE_V)) continue;
+
+      pagetable_t pgtbv2 = (pagetable_t)PTE2PA(pte);
+      printf(".. ..%d: pte %p pa %p\n", j, pte, pgtbv2);
+      for(int k = 0; k < 512; ++k) {
+        if(!((pte = pgtbv2[k]) & PTE_V)) continue;
+        printf(".. .. ..%d: pte %p pa %p\n", k, pte, PTE2PA(pte));
+      }
+    }
+  }
+}
