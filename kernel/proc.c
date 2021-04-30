@@ -121,6 +121,19 @@ found:
     return 0;
   }
 
+  // create a kernel page copy in user process
+  p->kpagetable = prok_pagetable();
+  if(p->kpagetable == 0) {
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // set up kernel stack for per-process kernel pagetable
+  uint64 va = KSTACK((int) (p-proc));
+  if(mappages(p->kpagetable, va, PGSIZE, kvmpa(va), PTE_R | PTE_W) != 0) 
+    panic("prok_mapStack");
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -142,6 +155,9 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+  if(p->kpagetable)
+    prok_freewalk(p->kpagetable);
+  p->kpagetable = 0;
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
@@ -473,6 +489,8 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        w_satp(MAKE_SATP(p->kpagetable));
+        sfence_vma();
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -480,6 +498,15 @@ scheduler(void)
         c->proc = 0;
 
         found = 1;
+        // when not running, `kernel_pagetable` should be used!
+        // the following uncommented code is short for
+        //      w_satp(MAKE_SATP(kernel_pagetable));
+        //      sfence_vma();
+        // while `kernel_pagetable` is not valid in this file.
+        // If you want to use `kernel_pagetable`, add 
+        //      extern pagetable_t kernel_pagetable
+        // properly.
+        kvminithart();
       }
       release(&p->lock);
     }

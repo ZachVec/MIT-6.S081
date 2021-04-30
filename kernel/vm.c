@@ -223,6 +223,42 @@ uvminit(pagetable_t pagetable, uchar *src, uint sz)
   memmove(mem, src, sz);
 }
 
+// create a User kernel pagetable 
+// return address for that
+pagetable_t prok_pagetable() {
+  pagetable_t ukpgtb = uvmcreate();
+  
+  if(ukpgtb == 0) return 0;
+  if(mappages(ukpgtb, UART0, PGSIZE, UART0, PTE_R | PTE_W) != 0) 
+    panic("prok_pagetable:UART0");
+  if(mappages(ukpgtb, VIRTIO0, PGSIZE, VIRTIO0, PTE_R | PTE_W) != 0) 
+    panic("prok_pagetable:VIRTIO0");
+  if(mappages(ukpgtb, CLINT, 0x10000, CLINT, PTE_R | PTE_W) != 0) 
+    panic("prok_pagetable:CLINT");
+  if(mappages(ukpgtb, PLIC, 0x400000, PLIC, PTE_R | PTE_W) != 0) 
+    panic("prok_pagetable:PLIC");
+  if(mappages(ukpgtb, KERNBASE, (uint64)etext-KERNBASE, KERNBASE, PTE_R | PTE_X) != 0) 
+    panic("prok_pagetable:KERNELBASE");
+  if(mappages(ukpgtb, (uint64)etext, PHYSTOP-(uint64)etext, (uint64)etext, PTE_R | PTE_W) != 0)
+    panic("prok_pagetable:etext");
+  if(mappages(ukpgtb, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) != 0) 
+    panic("prok_pagetable:TRAMPOLINE");
+  return ukpgtb;
+}
+
+void prok_freewalk(pagetable_t pagetable) {
+  for(int i = 0; i < 512; i++) {
+    pte_t pte = pagetable[i];
+    // this PTE points to a lower-level pagetable 
+    if(PTE_FLAGS(pte) == PTE_V) {
+      prok_freewalk((pagetable_t)PTE2PA(pte));
+      pagetable[i] = 0;
+    } else if(pte & PTE_V) {
+      pagetable[i] = 0;
+    }
+  }
+  kfree(pagetable);
+}
 // Allocate PTEs and physical memory to grow process from oldsz to
 // newsz, which need not be page aligned.  Returns new size or 0 on error.
 uint64
