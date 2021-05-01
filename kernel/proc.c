@@ -122,7 +122,7 @@ found:
   }
 
   // create a kernel page copy in user process
-  p->kpagetable = prok_pagetable();
+  p->kpagetable = prok_pagetable(p);
   if(p->kpagetable == 0) {
     freeproc(p);
     release(&p->lock);
@@ -156,7 +156,7 @@ freeproc(struct proc *p)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
   if(p->kpagetable)
-    prok_freewalk(p->kpagetable);
+    prok_freepagetable(p->kpagetable);
   p->kpagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -209,6 +209,44 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmfree(pagetable, sz);
+}
+
+// create a User kernel pagetable 
+// return address for that
+pagetable_t prok_pagetable(struct proc *p) {
+  extern char etext[];
+  pagetable_t ukpgtb = uvmcreate();
+  
+  if(ukpgtb == 0) return 0;
+  if(mappages(ukpgtb, UART0, PGSIZE, UART0, PTE_R | PTE_W) != 0) 
+    panic("prok_pagetable:UART0");
+  if(mappages(ukpgtb, VIRTIO0, PGSIZE, VIRTIO0, PTE_R | PTE_W) != 0) 
+    panic("prok_pagetable:VIRTIO0");
+  if(mappages(ukpgtb, PLIC, 0x400000, PLIC, PTE_R | PTE_W) != 0) 
+    panic("prok_pagetable:PLIC");
+  if(mappages(ukpgtb, KERNBASE, (uint64)etext-KERNBASE, KERNBASE, PTE_R | PTE_X) != 0) 
+    panic("prok_pagetable:KERNELBASE");
+  if(mappages(ukpgtb, (uint64)etext, PHYSTOP-(uint64)etext, (uint64)etext, PTE_R | PTE_W) != 0)
+    panic("prok_pagetable:etext");
+  if(mappages(ukpgtb, TRAPFRAME, PGSIZE, (uint64)(p->trapframe), PTE_R | PTE_W) < 0)
+    panic("prok_pagetable:trapframe");
+  if(mappages(ukpgtb, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) != 0) 
+    panic("prok_pagetable:TRAMPOLINE");
+  return ukpgtb;
+}
+
+void prok_freepagetable(pagetable_t pagetable) {
+  for(int i = 0; i < 512; i++) {
+    pte_t pte = pagetable[i];
+    // this PTE points to a lower-level pagetable 
+    if(PTE_FLAGS(pte) == PTE_V) {
+      prok_freepagetable((pagetable_t)PTE2PA(pte));
+      pagetable[i] = 0;
+    } else if(pte & PTE_V) {
+      pagetable[i] = 0;
+    }
+  }
+  kfree(pagetable);
 }
 
 // a user program that calls exec("/init")

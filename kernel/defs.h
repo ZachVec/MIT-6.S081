@@ -92,6 +92,8 @@ int             fork(void);
 int             growproc(int);
 pagetable_t     proc_pagetable(struct proc *);
 void            proc_freepagetable(pagetable_t, uint64);
+pagetable_t     prok_pagetable(struct proc *);
+void            prok_freepagetable(pagetable_t);
 int             kill(int);
 struct cpu*     mycpu(void);
 struct cpu*     getmycpu(void);
@@ -165,8 +167,6 @@ void            kvmmap(uint64, uint64, uint64, int);
 int             mappages(pagetable_t, uint64, uint64, uint64, int);
 pagetable_t     uvmcreate(void);
 void            uvminit(pagetable_t, uchar *, uint);
-pagetable_t     prok_pagetable(void);
-void            prok_freewalk(pagetable_t);
 uint64          uvmalloc(pagetable_t, uint64, uint64);
 uint64          uvmdealloc(pagetable_t, uint64, uint64);
 #ifdef SOL_COW
@@ -197,6 +197,9 @@ void            virtio_disk_intr(void);
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
 
+// vmcopyin.c
+int             copyin_new(pagetable_t, char *, uint64, uint64);
+int             copyinstr_new(pagetable_t, char *, uint64, uint64);
 
 // stats.c
 void            statsinit(void);
