@@ -5,13 +5,13 @@ My output of vmprint looks like this:
 page table 0x0000000087f25000
 ..0: pte 0x0000000021fc8401 pa 0x0000000087f21000
 .. ..0: pte 0x0000000021fc8001 pa 0x0000000087f20000
-.. .. ..0: pte 0x0000000021fc881f pa 0x0000000087f22000	  	va 0x0000 -> text, data
-.. .. ..1: pte 0x0000000021fc7c0f pa 0x0000000087f1f000		va 0x1000 -> guard page
-.. .. ..2: pte 0x0000000021fc781f pa 0x0000000087f1e000 	va 0x2000 -> stack
+.. .. ..0: pte 0x0000000021fc881f pa 0x0000000087f22000     va 0x0000 -> text, data
+.. .. ..1: pte 0x0000000021fc7c0f pa 0x0000000087f1f000     va 0x1000 -> guard page
+.. .. ..2: pte 0x0000000021fc781f pa 0x0000000087f1e000     va 0x2000 -> stack
 ..255: pte 0x0000000021fc9001 pa 0x0000000087f24000
 .. ..511: pte 0x0000000021fc8c01 pa 0x0000000087f23000
-.. .. ..510: pte 0x0000000021fdd807 pa 0x0000000087f76000	va 0x3fffffe000 -> trapframe
-.. .. ..511: pte 0x0000000020001c0b pa 0x0000000080007000	va 0x3ffffff000 -> trapoline
+.. .. ..510: pte 0x0000000021fdd807 pa 0x0000000087f76000   va 0x3fffffe000 -> trapframe
+.. .. ..511: pte 0x0000000020001c0b pa 0x0000000080007000   va 0x3ffffff000 -> trapoline
 -------------------------------------
 
 Q: What does page 0 contain? What is in page 2?
