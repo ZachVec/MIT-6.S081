@@ -94,6 +94,7 @@ pagetable_t     proc_pagetable(struct proc *);
 void            proc_freepagetable(pagetable_t, uint64);
 pagetable_t     prok_pagetable(struct proc *);
 void            prok_freepagetable(pagetable_t);
+void            copy_mappings(pagetable_t, pagetable_t, uint64, uint64);
 int             kill(int);
 struct cpu*     mycpu(void);
 struct cpu*     getmycpu(void);
@@ -181,6 +182,8 @@ int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t);
+void            copy_mappings(pagetable_t, pagetable_t, uint64, uint64);
+void            free_mappings(pagetable_t, uint64, uint64);
 
 // plic.c
 void            plicinit(void);
