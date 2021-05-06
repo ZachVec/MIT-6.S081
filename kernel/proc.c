@@ -113,6 +113,12 @@ found:
     return 0;
   }
 
+  // Allocate a trapframe page backup for handling timer interrupt
+  if((p->trapframebak = (struct trapframe *)kalloc()) == 0) {
+    release(&p->lock);
+    return 0;
+  }
+
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
@@ -131,6 +137,7 @@ found:
   p->ticks = 0;
   p->tickspassed = 0;
   p->handler = 0;
+  p->handling = 0;
   return p;
 }
 
@@ -143,6 +150,9 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+  if(p->trapframebak)
+    kfree((void *)p->trapframebak);
+  p->trapframebak = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;

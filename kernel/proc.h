@@ -107,5 +107,7 @@ struct proc {
   // added for lab trap
   int ticks;
   int tickspassed;
+  int handling;
   uint64 handler;
+  struct trapframe *trapframebak;
 };

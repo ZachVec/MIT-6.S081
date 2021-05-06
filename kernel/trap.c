@@ -70,8 +70,10 @@ usertrap(void)
     if(which_dev == 2 && p->ticks) {
       // timer interrupt && has called sys_sigalarm
       p->tickspassed += 1;
-      if(p->tickspassed == p->ticks) {
-        p->tickspassed    = 0;
+      if(!p->handling && p->tickspassed >= p->ticks) {
+        memmove(p->trapframebak, p->trapframe, sizeof(struct trapframe));
+        p->tickspassed = 0;
+        p->handling = 1;
         p->trapframe->epc = p->handler;
       }
     }
