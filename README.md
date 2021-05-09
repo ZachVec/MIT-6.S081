@@ -8,7 +8,7 @@ This is a repository of my solutions to labs of MIT 6.S081, Operating System Eng
 - [x] [Lab syscall: System calls](https://github.com/ZachVec/6.S081/tree/syscall)
 - [x] [Lab pgtbl: Page tables](https://github.com/ZachVec/6.S081/tree/pgtbl)
 - [x] [Lab traps: Trap](https://github.com/ZachVec/6.S081/tree/traps)
-- [ ] [Lab lazy: Lazy allocation](https://github.com/ZachVec/6.S081/tree/lazy)
+- [x] [Lab lazy: Lazy allocation](https://github.com/ZachVec/6.S081/tree/lazy)
 - [ ] [Lab cow: Copy-on-write fork](https://github.com/ZachVec/6.S081/tree/cow)
 - [ ] [Lab thread: Multithreading](https://github.com/ZachVec/6.S081/tree/thread)
 - [ ] [Lab lock: Parallelism/locking](https://github.com/ZachVec/6.S081/tree/lock)
