@@ -69,17 +69,8 @@ usertrap(void)
     // ok
   } else if(r_scause() == 13 || r_scause() == 15) {
     // page fault
-    char *mem;
-    uint64 faultingVa = r_stval();
-    if(faultingVa >= p->sz || (mem = kalloc()) == 0) { 
+    if(pagefault_handler(p->pagetable, r_stval(), p->sz, p->trapframe->sp) < 0)
       p->killed = 1;
-    } else {
-      memset(mem, 0, PGSIZE);
-      if(mappages(p->pagetable, PGROUNDDOWN(faultingVa), PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0) {
-        kfree(mem);
-        p->killed = 1;
-      }
-    }
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
@@ -231,3 +222,15 @@ devintr()
   }
 }
 
+
+int pagefault_handler(pagetable_t pagetable, uint64 va, uint64 sz, uint64 sp) {
+  char *mem;
+  if(va >= sz || va < sp || (mem = kalloc()) == 0) return -1;
+
+  memset(mem, 0, PGSIZE);
+  if(mappages(pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0) {
+    kfree(mem);
+    return -1;
+  }
+  return 0;
+}

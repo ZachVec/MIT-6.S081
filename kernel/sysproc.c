@@ -44,10 +44,11 @@ sys_sbrk(void)
   int addr;
   int n;
 
+  addr = myproc()->sz;
   if(argint(0, &n) < 0)
     return -1;
-  addr = myproc()->sz;
-  myproc()->sz = addr + n;
+  if(lazygrowproc(n) < 0)
+    return -1;
   return addr;
 }
 

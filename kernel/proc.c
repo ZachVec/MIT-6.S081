@@ -253,6 +253,21 @@ growproc(int n)
   return 0;
 }
 
+int
+lazygrowproc(int n) {
+  struct proc *p = myproc();
+  uint64 sz = p->sz;
+
+  if(sz + n > MAXVA) return -1;
+
+  if(n > 0) {
+    p->sz = sz + n;
+  } else {
+    p->sz = uvmdealloc(p->pagetable, sz, sz + n);
+  }
+  return 0;
+}
+
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
 int
