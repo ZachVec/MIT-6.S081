@@ -16,3 +16,8 @@ This is a repository of my solutions to labs of MIT 6.S081, Operating System Eng
 - [ ] [Lab mmap: Mmap](https://github.com/ZachVec/6.S081/tree/mmap)
 - [ ] [Lab net: Network stack](https://github.com/ZachVec/6.S081/tree/net)
 
+## About xv6 memory layout
+
+xv6 的内存布局大概如下所示，可以在一些虚拟内存相关实验中帮助到你
+
+![xv6 memory layout](https://github.com/ZachVec/6.S081/blob/master/memory%20layout.png)
