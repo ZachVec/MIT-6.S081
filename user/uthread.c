@@ -12,10 +12,9 @@
 
 
 struct context {
+  // callee-saved registers
   uint64 ra;
   uint64 sp;
-
-  // callee-saved registers
   uint64 s0;
   uint64 s1;
   uint64 s2;
@@ -32,8 +31,8 @@ struct context {
 
 struct thread {
   // add the struct context at the very top of thread
-  // so that you don't have to calculate the offset of
-  // each register in context
+  // so that you don't have to worry about offset of
+  // registers in context
   struct     context context;   /* Thread Context */
   char       stack[STACK_SIZE]; /* the thread's stack */
   int        state;             /* FREE, RUNNING, RUNNABLE */
