@@ -10,7 +10,7 @@ This is a repository of my solutions to labs of MIT 6.S081, Operating System Eng
 - [x] [Lab traps: Trap](https://github.com/ZachVec/6.S081/tree/traps)
 - [x] [Lab lazy: Lazy allocation](https://github.com/ZachVec/6.S081/tree/lazy)
 - [x] [Lab cow: Copy-on-write fork](https://github.com/ZachVec/6.S081/tree/cow)
-- [ ] [Lab thread: Multithreading](https://github.com/ZachVec/6.S081/tree/thread)
+- [x] [Lab thread: Multithreading](https://github.com/ZachVec/6.S081/tree/thread)
 - [ ] [Lab lock: Parallelism/locking](https://github.com/ZachVec/6.S081/tree/lock)
 - [ ] [Lab fs: File system](https://github.com/ZachVec/6.S081/tree/fs)
 - [ ] [Lab mmap: Mmap](https://github.com/ZachVec/6.S081/tree/mmap)
