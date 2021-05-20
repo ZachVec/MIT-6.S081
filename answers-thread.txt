@@ -1,2 +1,19 @@
 Q1: thread_switch needs to save/restore only the callee-save registers. Why?
 A1: The caller-save registers have already been saved on stack by caller.
+
+Q2: Why are there missing keys with 2 threads, but not with 1 thread? Identify a sequence of events with 2 threads that can lead to a key being missing.
+A2: Key missing occurs when two thread try to add new keys to the same bucket. At that time, the invariant that table[i] points to the first entry is broken, so we need locks to serialize them.Sequence in insert leading to key being missing is shown below:
+
+```c
+static void
+insert(int key, int value, struct entry **p, struct entry *n)
+{
+  ...
+  e->key = key;
+  e->value = value;
+  e->next = n;
+  *p = e;
+}
+```
+
+
