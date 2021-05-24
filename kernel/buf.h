@@ -10,3 +10,5 @@ struct buf {
   uchar data[BSIZE];
 };
 
+#define NBUCKET 13
+#define hash(blockno) ((blockno) % NBUCKET)
