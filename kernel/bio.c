@@ -34,10 +34,8 @@ binit(void)
 {
   struct buf *b;
 
-  char lockname[9];
   for(int i = 0; i < NBUCKET; ++i) {
-    snprintf(lockname, 9, "bcache%d", i);
-    initlock(&bcache.locks[i], lockname);
+    initlock(&bcache.locks[i], "bcache.bucket");
     bcache.head[i].prev = &bcache.head[i];
     bcache.head[i].next = &bcache.head[i];
   }
