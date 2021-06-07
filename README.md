@@ -13,7 +13,7 @@ This is a repository of my solutions to labs of MIT 6.S081, Operating System Eng
 - [x] [Lab thread: Multithreading](https://github.com/ZachVec/6.S081/tree/thread)
 - [x] [Lab lock: Parallelism/locking](https://github.com/ZachVec/6.S081/tree/lock)
 - [x] [Lab fs: File system](https://github.com/ZachVec/6.S081/tree/fs)
-- [ ] [Lab mmap: Mmap](https://github.com/ZachVec/6.S081/tree/mmap)
+- [x] [Lab mmap: Mmap](https://github.com/ZachVec/6.S081/tree/mmap)
 - [ ] [Lab net: Network stack](https://github.com/ZachVec/6.S081/tree/net)
 
 ## About xv6 memory layout
