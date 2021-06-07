@@ -498,11 +498,9 @@ vmafind(struct vma_t *vma, uint64 va){
 
 // codes for lab mmap
 static struct vma_t *
-vmaalloc(struct proc *p){
-  for(int i = 0; i < NVMA; i++) {
-    if(p->vma[i].len == 0) {
-      return &p->vma[i];
-    }
+vmaalloc(struct vma_t *vma){
+  for(struct vma_t *v = vma; v < vma + NVMA; v++){
+    if(v->len == 0) return v;
   }
   return 0;
 }
@@ -556,7 +554,7 @@ sys_mmap(void)
 
   // alloc vma
   struct proc *p = myproc();
-  struct vma_t *vma = vmaalloc(p);
+  struct vma_t *vma = vmaalloc(p->vma);
   if(vma == 0) return -1;
   addr = PGROUNDDOWN(p->vma_addr - len);
   vma->addr = addr;
@@ -645,5 +643,15 @@ mmap_free(struct proc *p){
     if(!v->len) continue;
     writeback(v, v->off, v->len);
     uvmunmap(p->pagetable, v->off, v->len / PGSIZE, 1);
+  }
+}
+
+void
+vmacopy(struct vma_t *src, struct vma_t *dst){
+  for(struct vma_t *v = src; v < src + NVMA; v++){
+    if(v->len == 0) continue;
+    memmove(dst, src, sizeof(struct vma_t));
+    filedup(src->file);
+    dst++;
   }
 }

@@ -302,6 +302,8 @@ fork(void)
 
   pid = np->pid;
 
+  vmacopy(p->vma, np->vma);
+
   np->state = RUNNABLE;
 
   release(&np->lock);
