@@ -65,6 +65,16 @@ usertrap(void)
     intr_on();
 
     syscall();
+  } else if(r_scause() == 13 || r_scause() == 15){
+    // pagefault caused by lazy alloc of mmap
+    uint64 va = r_stval();
+    if(va >= MAXVA) {
+      p->killed = 1;
+    } else if(PGROUNDDOWN(p->trapframe->sp) <= va && va < p->trapframe->sp) {
+      p->killed = 1;
+    } else if(mmap_handler(p, va) < 0) {
+      p->killed = 1;
+    }
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {

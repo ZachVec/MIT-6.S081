@@ -484,3 +484,166 @@ sys_pipe(void)
   }
   return 0;
 }
+
+static struct vma_t *
+vmafind(struct vma_t *vma, uint64 va){
+  struct vma_t *target = 0;
+  for(struct vma_t *tmp = vma; tmp < vma + NVMA; tmp++){
+    if(!tmp->len || tmp->off > va || tmp->off + tmp->len <= va ) continue;
+    target = tmp;
+    break;
+  }
+  return target;
+}
+
+// codes for lab mmap
+static struct vma_t *
+vmaalloc(struct proc *p){
+  for(int i = 0; i < NVMA; i++) {
+    if(p->vma[i].len == 0) {
+      return &p->vma[i];
+    }
+  }
+  return 0;
+}
+
+static int
+writeback(struct vma_t *vma, uint64 addr, uint64 n) {
+  if(!(vma->prot & PROT_WRITE) || (vma->flags & MAP_PRIVATE))
+    return 0;
+  if(!vma->file->writable && (vma->prot & PROT_WRITE) && (vma->flags & MAP_SHARED))
+    return -1;
+
+  uint size = vma->file->ip->size;
+  if(vma->addr + size < addr + n) { // if n too large
+    if(vma->addr + size < addr) // n should be negative
+      n = 0;
+    else
+      n = vma->addr + size - addr;
+  }
+  // if oversize logic needs to be implemented.
+  int max = ((MAXOPBLOCKS-1-1-2) / 2) * BSIZE, i, r;
+  for(i = 0; i < n; i += r) {
+    int n1 = n - i;
+    if(n1 > max) n1 = max;
+
+    begin_op();
+    ilock(vma->file->ip);
+    r = writei(vma->file->ip, 1, addr + i, addr - vma->addr + i, n1);
+    iunlock(vma->file->ip);
+    end_op();
+  }
+  return i == n ? n : -1;
+}
+
+uint64
+sys_mmap(void)
+{
+  int prot, flags, fd;
+  uint64 addr, len;
+  struct file *file;
+
+  if(argaddr(1, &len) < 0 || argint(2, &prot) < 0 || argint(3, &flags) < 0 || argfd(4, &fd, &file) < 0)
+    return -1;
+
+  // mapped a read only file with PROT_WRITE and MAP_SHARED
+  if(!file->writable && (prot & PROT_WRITE) && (flags & MAP_SHARED))
+    return -1;
+
+  // mapped a unreadable file with PROT_READ
+  if(!file->readable && (prot & PROT_READ))
+    return -1;
+
+  // alloc vma
+  struct proc *p = myproc();
+  struct vma_t *vma = vmaalloc(p);
+  if(vma == 0) return -1;
+  addr = PGROUNDDOWN(p->vma_addr - len);
+  vma->addr = addr;
+  vma->off  = addr;
+  vma->len  = len;
+  vma->prot = prot;
+  vma->flags= flags;
+  vma->file = file;
+  filedup(file);
+  p->vma_addr = addr;
+  return addr;
+}
+
+
+/**
+ * addr must be page aligned
+ * len must be a multiple of PGSIZE
+*/
+uint64
+sys_munmap(void)
+{
+  uint64 addr, len;
+  if(argaddr(0, &addr) < 0 || argaddr(1, &len) < 0)
+    return -1;
+  
+  if(addr % PGSIZE != 0 || len % PGSIZE != 0)
+    panic("munmap: page not aligned");
+  
+  // find target vma
+  struct proc *p = myproc();
+  struct vma_t *target;
+  if((target = vmafind(p->vma, addr)) == 0) return -1;
+
+  // neither unmap at start or end
+  if(addr != target->off && addr + len != target->off + target->len)
+    panic("munmap: punching hole");
+
+  if(writeback(target, addr, len) < 0)
+    panic("munmap: write back");
+
+  uvmunmap(p->pagetable, addr, len / PGSIZE, 1);
+  if(addr == target->off) {
+    // if unmap at the beginning
+    target->off += len;
+    target->len -= len;
+    if(target->len == 0) fileclose(target->file);
+  } else {
+    // unmap at the end
+    target->len -= len;
+  }
+  return 0;
+}
+
+int
+mmap_handler(struct proc *p, uint64 va) {
+  // find target vma
+  struct vma_t *target = 0;
+  if((target = vmafind(p->vma, va)) == 0)
+    return -1;
+
+  // if target found, add mappings
+  uint64 mem;
+  pte_t *pte = walk(p->pagetable, va, 1);
+  if((mem = (uint64)kalloc()) == 0)
+    return -1;
+  memset((void *)mem, 0, PGSIZE);
+  *pte = PA2PTE(mem) | PTE_U | PTE_V;
+  if(target->prot & PROT_READ)  *pte |= PTE_R;
+  if(target->prot & PROT_WRITE) *pte |= PTE_W;
+  if(target->prot & PROT_EXEC)  *pte |= PTE_X;
+
+  // load file content into memory
+  va = PGROUNDDOWN(va);
+  ilock(target->file->ip);
+  if(readi(target->file->ip, 0, mem, va-target->addr, PGSIZE) < 0){
+    iunlock(target->file->ip);
+    return -1;
+  }
+  iunlock(target->file->ip);
+  return 0;
+}
+
+void
+mmap_free(struct proc *p){
+  for(struct vma_t *v = p->vma; v < p->vma + NVMA; v++){
+    if(!v->len) continue;
+    writeback(v, v->off, v->len);
+    uvmunmap(p->pagetable, v->off, v->len / PGSIZE, 1);
+  }
+}

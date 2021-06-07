@@ -82,6 +82,15 @@ struct trapframe {
 
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct vma_t{
+  uint64 addr;                 // initial mapped address
+  uint64 off;               // addr after munmap
+  uint64 len;                  // 0 if unused
+  int    prot;                 // protection: PROT_NONE, PROT_WRITE, PROT_READ, PROT_EXEC};
+  int    flags;                // mapped flags: MAP_PRIVATE, MAP_SHARED
+  struct file *file;           // mapped file
+};
+
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -103,4 +112,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // add for lab mmap
+  struct vma_t vma[NVMA];           // process's vma linked list, 0 if empty
+  uint64 vma_addr;             // vma_addr like sp, grow downwards.
 };
