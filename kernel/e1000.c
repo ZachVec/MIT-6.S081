@@ -19,7 +19,7 @@ static struct mbuf *rx_mbufs[RX_RING_SIZE];
 // remember where the e1000's registers live.
 static volatile uint32 *regs;
 
-struct spinlock e1000_lock;
+struct spinlock e1000_lock, e1000_lock_recv;
 
 // called by pci_init().
 // xregs is the memory address at which the
@@ -30,6 +30,7 @@ e1000_init(uint32 *xregs)
   int i;
 
   initlock(&e1000_lock, "e1000");
+  initlock(&e1000_lock_recv, "e1000"); // use to block concurrent recv while receiving.
 
   regs = xregs;
 
@@ -102,7 +103,33 @@ e1000_transmit(struct mbuf *m)
   // the TX descriptor ring so that the e1000 sends it. Stash
   // a pointer so that it can be freed after sending.
   //
-  
+  acquire(&e1000_lock);
+  uint32 index = regs[E1000_TDT];
+  if(!(tx_ring[index].status & E1000_TXD_STAT_DD)){
+    // last transmit request hasn't been finished yet.
+    // return error
+    release(&e1000_lock);
+    return -1;
+  }
+
+  // otherwise, the mbuf indicated by tx_ring[index]
+  // has been transmitted. Then free it.
+  if(tx_mbufs[index]){
+    mbuffree(tx_mbufs[index]);
+  }
+
+  tx_mbufs[index] = m;
+  // modify the tx_ring[index], so that rx_desc points to right mbuf
+  memset(&tx_ring[index], 0, sizeof(struct tx_desc));
+  tx_ring[index].addr   = (uint64)m->head;
+  tx_ring[index].length = (uint16)m->len;
+  // look at section 3.3.3.1 in the E1000 Manual
+  // Actually in e1000_dev.h, there are only 2 bits
+  // E1000_TXD_CMD_RS and E1000_TXD_CMD_EOP
+  // set report status for future use, and alse the end of packets bit.
+  tx_ring[index].cmd    = E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP;
+  regs[E1000_TDT]       = (index + 1) % TX_RING_SIZE;
+  release(&e1000_lock);
   return 0;
 }
 
@@ -115,6 +142,28 @@ e1000_recv(void)
   // Check for packets that have arrived from the e1000
   // Create and deliver an mbuf for each packet (using net_rx()).
   //
+  while(1){
+    uint32 index = regs[E1000_RDT];
+    index = (index+1) % RX_RING_SIZE;
+
+    // if no new packets available
+    if(!(rx_ring[index].status & E1000_RXD_STAT_DD)) return;
+
+    // otherwise, update mbuf
+    rx_mbufs[index]->len = rx_ring[index].length;
+
+    // deliver the mbuf to the network statck.
+    net_rx(rx_mbufs[index]);
+
+    // alloc a new mbuf to replace the one just given to net_rx()
+    struct mbuf *m = mbufalloc(0);
+    rx_mbufs[index] = m;
+    rx_ring[index].addr   = (uint64) m->head;
+    rx_ring[index].status = 0;
+
+    // update reg E1000_RDT
+    regs[E1000_RDT] = index;
+  }
 }
 
 void
@@ -123,7 +172,9 @@ e1000_intr(void)
   // tell the e1000 we've seen this interrupt;
   // without this the e1000 won't raise any
   // further interrupts.
+  acquire(&e1000_lock_recv);
   regs[E1000_ICR] = 0xffffffff;
-
+  __sync_synchronize();
   e1000_recv();
+  release(&e1000_lock_recv);
 }
